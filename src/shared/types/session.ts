@@ -116,6 +116,87 @@ export const StreamTextResultSchema = z.object({
   finishReason: z.string().optional(),
 })
 
+// Assistant/Agent schemas for group chat
+export const AssistantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  avatar: z.string().optional(),
+  systemPrompt: z.string().optional(),
+  provider: z.union([ModelProviderSchema, z.string()]),
+  modelId: z.string(),
+  settings: z.record(z.string(), z.unknown()).optional(),
+  isActive: z.boolean().optional().default(true),
+  isUser: z.boolean().optional().default(false), // 标记是否为用户（用于群聊中的用户角色）
+})
+
+// Game mode schemas
+export const GameModeEnum = {
+  None: 'none',
+  Werewolf: 'werewolf',
+  Debate: 'debate',
+  Brainstorm: 'brainstorm',
+  Custom: 'custom',
+} as const
+
+export type GameMode = (typeof GameModeEnum)[keyof typeof GameModeEnum]
+
+export const GameModeSchema = z.nativeEnum(GameModeEnum)
+
+// Flowchart node schemas
+export const FlowchartNodeTypeSchema = z.enum([
+  'start',
+  'message',
+  'condition',
+  'agent-assign',
+  'action',
+  'end',
+])
+
+export type FlowchartNodeType = z.infer<typeof FlowchartNodeTypeSchema>
+
+export const FlowchartNodeSchema = z.object({
+  id: z.string(),
+  type: FlowchartNodeTypeSchema,
+  label: z.string(),
+  position: z.object({
+    x: z.number(),
+    y: z.number(),
+  }),
+  data: z.record(z.string(), z.unknown()).optional(),
+})
+
+export const FlowchartEdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(),
+  target: z.string(),
+  label: z.string().optional(),
+  condition: z.string().optional(), // for conditional edges
+})
+
+export const FlowchartSchema = z.object({
+  nodes: z.array(FlowchartNodeSchema),
+  edges: z.array(FlowchartEdgeSchema),
+})
+
+// Group chat settings schemas
+export const GroupChatSettingsSchema = z.object({
+  assistants: z.array(AssistantSchema),
+  gameMode: GameModeSchema.optional().default(GameModeEnum.None),
+  flowchart: FlowchartSchema.optional(),
+  autoReply: z.boolean().optional().default(false), // 是否自动轮替助手回复
+  replyOrder: z.array(z.string()).optional(), // 回复顺序（助手ID列表）
+  maxRounds: z.number().optional().default(10), // 最大轮次
+})
+
+// Extended Message schema for group chat
+const GroupChatMessageExtensionSchema = z.object({
+  assistantId: z.string().optional(), // 发送者助手ID（群聊场景）
+  replyToMessageId: z.string().optional(), // 引用回复的消息ID
+  replyToAssistantId: z.string().optional(), // 引用回复的助手ID
+  round: z.number().optional(), // 当前轮次
+  skip: z.boolean().optional().default(false), // 标记是否跳过回复
+})
+
 // Tool and provider schemas
 export const ToolUseScopeSchema = z.enum(['web-browsing', 'knowledge-base'])
 
@@ -188,10 +269,11 @@ export const MessageSchema = z.object({
   firstTokenLatency: z.number().optional(),
   finishReason: z.string().optional(),
   tokenCountMap: TokenCountMapSchema.optional(), // estimate token count as input
+  ...GroupChatMessageExtensionSchema.shape, // Group chat extensions
 })
 
 // Session schemas
-export const SessionTypeSchema = z.enum(['chat', 'picture'])
+export const SessionTypeSchema = z.enum(['chat', 'picture', 'group-chat'])
 
 export const MessageForkListSchema = z.object({
   id: z.string(),
@@ -224,6 +306,7 @@ export const SessionSchema = z.object({
   threads: z.array(SessionThreadSchema).optional(),
   threadName: z.string().optional(),
   messageForksHash: z.record(z.string(), MessageForkSchema).optional(),
+  groupChatSettings: GroupChatSettingsSchema.optional(), // Group chat specific settings
 })
 
 export const SessionMetaSchema = SessionSchema.pick({
@@ -268,3 +351,10 @@ export type Session = z.infer<typeof SessionSchema>
 export type SessionMeta = z.infer<typeof SessionMetaSchema>
 export type SessionThread = z.infer<typeof SessionThreadSchema>
 export type SessionThreadBrief = z.infer<typeof SessionThreadBriefSchema>
+
+// Group chat related types
+export type Assistant = z.infer<typeof AssistantSchema>
+export type FlowchartNode = z.infer<typeof FlowchartNodeSchema>
+export type FlowchartEdge = z.infer<typeof FlowchartEdgeSchema>
+export type Flowchart = z.infer<typeof FlowchartSchema>
+export type GroupChatSettings = z.infer<typeof GroupChatSettingsSchema>
