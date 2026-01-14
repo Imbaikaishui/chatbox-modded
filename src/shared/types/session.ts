@@ -116,6 +116,11 @@ export const StreamTextResultSchema = z.object({
   finishReason: z.string().optional(),
 })
 
+// Tool and provider schemas (moved here to be used before declaration)
+export const ToolUseScopeSchema = z.enum(['web-browsing', 'knowledge-base'])
+
+export const ModelProviderSchema = z.union([z.nativeEnum(ModelProviderEnum), z.string()])
+
 // Assistant/Agent schemas for group chat
 export const AssistantSchema = z.object({
   id: z.string(),
@@ -199,8 +204,6 @@ const GroupChatMessageExtensionSchema = z.object({
 
 // Tool and provider schemas
 export const ToolUseScopeSchema = z.enum(['web-browsing', 'knowledge-base'])
-
-export const ModelProviderSchema = z.union([z.nativeEnum(ModelProviderEnum), z.string()])
 
 // Message status schemas
 export const MessageStatusSchema = z.discriminatedUnion('type', [
